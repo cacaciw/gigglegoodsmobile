@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:gigglegoods/screens/menu.dart';
 import 'package:gigglegoods/widgets/left_drawer.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 
 class GiggleEntryFormPage extends StatefulWidget {
   const GiggleEntryFormPage({super.key});
@@ -10,11 +15,15 @@ class GiggleEntryFormPage extends StatefulWidget {
 
 class _GiggleEntryFormPageState extends State<GiggleEntryFormPage> {
   final _formKey = GlobalKey<FormState>();
-  String _product = "";
-  int _amount = 0;
+  String _name = "";
+  String _description = "";
   int _price = 0;
+  int _giggleLevel = 0;
+
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Center(
@@ -36,15 +45,15 @@ class _GiggleEntryFormPageState extends State<GiggleEntryFormPage> {
                 padding: const EdgeInsets.all(8.0),
                 child: TextFormField(
                   decoration: InputDecoration(
-                    hintText: "Product",
-                    labelText: "Product",
+                    hintText: "Name",
+                    labelText: "Name",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(5.0),
                     ),
                   ),
                   onChanged: (String? value) {
                     setState(() {
-                      _product = value!;
+                      _name = value!;
                     });
                   },
                   validator: (String? value) {
@@ -59,23 +68,20 @@ class _GiggleEntryFormPageState extends State<GiggleEntryFormPage> {
                 padding: const EdgeInsets.all(8.0),
                 child: TextFormField(
                   decoration: InputDecoration(
-                    hintText: "Amount",
-                    labelText: "Amount",
+                    hintText: "Description",
+                    labelText: "Description",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(5.0),
                     ),
                   ),
                   onChanged: (String? value) {
                     setState(() {
-                      _amount = int.tryParse(value!) ?? 0;
+                      _description = value!;
                     });
                   },
                   validator: (String? value) {
                     if (value == null || value.isEmpty) {
-                      return "Product amount can't be empty!";
-                    }
-                    if (int.tryParse(value) == null) {
-                      return "Product amount has to be a number!";
+                      return " Product description can't be empty!";
                     }
                     return null;
                   },
@@ -107,6 +113,32 @@ class _GiggleEntryFormPageState extends State<GiggleEntryFormPage> {
                   },
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    hintText: "GiggleLevel",
+                    labelText: "GiggleLevel",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(5.0),
+                    ),
+                  ),
+                  onChanged: (String? value) {
+                    setState(() {
+                      _price = int.tryParse(value!) ?? 0;
+                    });
+                  },
+                  validator: (String? value) {
+                    if (value == null || value.isEmpty) {
+                      return "Giggle Level can't be empty!";
+                    }
+                    if (int.tryParse(value) == null) {
+                      return "Giggle Level has to be a number!";
+                    }
+                    return null;
+                  },
+                ),
+              ),
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
@@ -116,35 +148,68 @@ class _GiggleEntryFormPageState extends State<GiggleEntryFormPage> {
                       backgroundColor: MaterialStateProperty.all(
                           Theme.of(context).colorScheme.primary),
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
+                        // Show loading indicator
                         showDialog(
                           context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Product berhasil tersimpan'),
-                              content: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Product: $_product'),
-                                    Text('Amount: $_amount'),
-                                    Text('Price: $_price')
-                                  ],
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  child: const Text('OK'),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _formKey.currentState!.reset();
-                                  },
-                                ),
-                              ],
-                            );
+                          barrierDismissible: false,
+                          builder: (BuildContext context) {
+                            return const Center(
+                                child: CircularProgressIndicator());
                           },
                         );
+
+                        try {
+                          final response = await request.postJson(
+                            "http://127.0.0.1:8000/create-flutter/",
+                            jsonEncode(<String, String>{
+                              'Name': _name,
+                              'Description': _description,
+                              'Price': _price.toString(),
+                              'GiggleLevel': _giggleLevel.toString(),
+                            }),
+                          );
+
+                          if (context.mounted) {
+                            // Hide loading indicator
+                            Navigator.pop(context);
+
+                            if (response['status'] == 'success') {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Product successfully saved!"),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => MyHomePage()),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(response['message'] ??
+                                      "An error occurred. Please try again."),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            // Hide loading indicator
+                            Navigator.pop(context);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Error: ${e.toString()}"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       }
                     },
                     child: const Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gigglegoods/screens/list_giggleentry.dart';
 import 'package:gigglegoods/screens/menu.dart';
 import 'package:gigglegoods/screens/giggleentry_form.dart';
 
@@ -52,7 +53,7 @@ class LeftDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.shopping_cart_checkout_rounded),
-            title: const Text('Tambah Product'),
+            title: const Text('Tambah Produk'),
             // Bagian redirection ke MoodEntryFormPage
             onTap: () {
               Navigator.push(
@@ -60,6 +61,18 @@ class LeftDrawer extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => const GiggleEntryFormPage(),
                   ));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.add_reaction_rounded),
+            title: const Text('Daftar Produk'),
+            onTap: () {
+              // Route menu ke halaman mood
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const GiggleEntryPage()),
+              );
             },
           ),
         ],
